@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 
 export default function ConstellationScale() {
-  const [energy, setEnergy] = useState(35)
+  const [energy, setEnergy] = useState(40)
   const [charging, setCharging] = useState(false)
 
   useEffect(() => {
@@ -19,83 +19,73 @@ export default function ConstellationScale() {
     }
   }, [charging])
 
-  // Generate constellation nodes
+  // Constellation node positions
   const nodes = [
-    { x: 80, y: 60 },
-    { x: 150, y: 40 },
-    { x: 220, y: 70 },
-    { x: 280, y: 45 },
-    { x: 340, y: 80 },
-    { x: 300, y: 110 },
-    { x: 200, y: 120 },
-    { x: 120, y: 100 },
+    { x: 80, y: 60, label: 'I' },
+    { x: 160, y: 40, label: 'II' },
+    { x: 240, y: 70, label: 'III' },
+    { x: 320, y: 45, label: 'IV' },
+    { x: 400, y: 65, label: 'V' },
+    { x: 480, y: 35, label: 'VI' },
   ]
 
-  const connections = [
-    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0],
-    [1, 6], [2, 5]
-  ]
-
-  const activeConnections = Math.floor((energy / 100) * connections.length)
+  const activeNodes = Math.floor((energy / 100) * nodes.length)
 
   return (
     <div className="thin-border bg-[var(--bg-panel)] p-6 geo-pattern">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="text-[var(--energy-glow)] text-lg">✧</span>
-          <span className="font-[var(--font-cjk)] text-[var(--text-primary)] text-sm">能量槽</span>
+          <span className="font-[var(--font-en)] text-[var(--energy-glow)] text-xs tracking-wider">THE SCALE</span>
+          <span className="font-[var(--font-mono)] text-[var(--text-secondary)] text-[10px]">
+            {energy}%
+          </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-[var(--font-en)] text-[var(--energy-glow)] text-lg">{energy}</span>
-          <span className="font-[var(--font-en)] text-[var(--text-secondary)] text-xs">/ 100</span>
+        <div className="flex items-center gap-1">
+          <span className="w-1.5 h-1.5 bg-[var(--energy-glow)] animate-pulse" />
+          <span className="font-[var(--font-mono)] text-[10px] text-[var(--energy-glow)]">
+            {charging ? 'CHARGING' : energy >= 100 ? 'FULL' : 'STANDBY'}
+          </span>
         </div>
       </div>
 
       {/* SVG Constellation */}
-      <div className="relative w-full h-40 mb-4">
-        <svg viewBox="0 0 420 160" className="w-full h-full">
-          {/* Background constellation lines (dim) */}
-          {connections.map((conn, i) => (
-            <line
-              key={`bg-${i}`}
-              x1={nodes[conn[0]].x}
-              y1={nodes[conn[0]].y}
-              x2={nodes[conn[1]].x}
-              y2={nodes[conn[1]].y}
-              stroke={i < activeConnections ? 'var(--energy-glow)' : 'rgba(242, 203, 91, 0.15)'}
-              strokeWidth={i < activeConnections ? '2' : '1'}
-              strokeDasharray={i < activeConnections ? 'none' : '4 4'}
-              style={{
-                transition: 'all 0.3s ease',
-                filter: i < activeConnections ? 'drop-shadow(0 0 4px rgba(242, 203, 91, 0.5))' : 'none'
-              }}
-            />
-          ))}
-
-          {/* Animated charging line */}
-          {charging && activeConnections < connections.length && (
-            <line
-              x1={nodes[connections[activeConnections][0]].x}
-              y1={nodes[connections[activeConnections][0]].y}
-              x2={nodes[connections[activeConnections][1]].x}
-              y2={nodes[connections[activeConnections][1]].y}
-              stroke="var(--energy-glow)"
-              strokeWidth="2"
-              strokeDasharray="1000"
-              strokeDashoffset="1000"
-              style={{
-                animation: 'constellationCharge 0.5s linear forwards'
-              }}
-            />
-          )}
+      <div className="relative w-full h-32 mb-4">
+        <svg className="w-full h-full" viewBox="0 0 560 100" preserveAspectRatio="xMidYMid meet">
+          {/* Connection lines */}
+          {nodes.map((node, i) => {
+            if (i === 0) return null
+            const prev = nodes[i - 1]
+            const isActive = i <= activeNodes
+            return (
+              <line
+                key={`line-${i}`}
+                x1={prev.x}
+                y1={prev.y}
+                x2={node.x}
+                y2={node.y}
+                stroke={isActive ? 'var(--energy-glow)' : 'rgba(242, 203, 91, 0.2)'}
+                strokeWidth={isActive ? '2' : '1'}
+                strokeDasharray={isActive ? 'none' : '4 4'}
+                style={{
+                  transition: 'all 0.5s ease',
+                  ...(isActive && charging ? {
+                    animation: 'constellationCharge 1s linear forwards',
+                    strokeDasharray: '1000',
+                    strokeDashoffset: '0'
+                  } : {})
+                }}
+              />
+            )
+          })}
 
           {/* Nodes */}
           {nodes.map((node, i) => {
-            const isActive = i < Math.ceil((energy / 100) * nodes.length)
+            const isActive = i < activeNodes
+            const isCurrent = i === activeNodes - 1
             return (
-              <g key={i}>
-                {/* Glow effect */}
+              <g key={`node-${i}`}>
+                {/* Glow effect for active nodes */}
                 {isActive && (
                   <circle
                     cx={node.x}
@@ -106,79 +96,76 @@ export default function ConstellationScale() {
                     strokeWidth="0.5"
                     opacity="0.3"
                     style={{
-                      animation: 'breathingGlow 2s ease-in-out infinite',
-                      animationDelay: `${i * 0.2}s`
+                      animation: isCurrent ? 'nodeSnap 0.5s ease forwards' : 'none'
                     }}
                   />
                 )}
-                {/* Node polygon */}
+                {/* Node shape */}
                 <polygon
-                  points={`${node.x},${node.y - 6} ${node.x + 5},${node.y} ${node.x},${node.y + 6} ${node.x - 5},${node.y}`}
+                  points={`${node.x},${node.y - 8} ${node.x + 7},${node.y} ${node.x},${node.y + 8} ${node.x - 7},${node.y}`}
                   fill={isActive ? 'var(--energy-glow)' : 'none'}
-                  stroke={isActive ? 'var(--energy-glow)' : 'rgba(255,255,255,0.3)'}
-                  strokeWidth="1"
+                  stroke={isActive ? 'var(--energy-glow)' : 'rgba(242, 203, 91, 0.3)'}
+                  strokeWidth="1.5"
                   style={{
-                    transition: 'all 0.3s var(--ease-snap)',
-                    transform: isActive ? 'scale(1)' : 'scale(0.8)',
-                    transformOrigin: `${node.x}px ${node.y}px`,
-                    filter: isActive ? 'drop-shadow(0 0 3px rgba(242, 203, 91, 0.6))' : 'none'
+                    transition: 'all 0.3s ease',
+                    filter: isActive ? 'drop-shadow(0 0 4px rgba(242, 203, 91, 0.6))' : 'none'
                   }}
                 />
-                {/* Node number */}
+                {/* Label */}
                 <text
                   x={node.x}
-                  y={node.y + 18}
+                  y={node.y + 22}
                   textAnchor="middle"
-                  className="font-mono"
+                  fill={isActive ? 'var(--energy-glow)' : 'var(--text-secondary)'}
                   fontSize="8"
-                  fill={isActive ? 'var(--energy-glow)' : 'rgba(255,255,255,0.2)'}
+                  fontFamily="var(--font-en)"
+                  style={{ transition: 'fill 0.3s ease' }}
                 >
-                  {String(i + 1).padStart(2, '0')}
+                  {node.label}
                 </text>
               </g>
             )
           })}
 
-          {/* Decorative circle */}
-          <ellipse
-            cx="210"
-            cy="80"
-            rx="180"
-            ry="60"
-            fill="none"
-            stroke="rgba(242, 203, 91, 0.08)"
-            strokeWidth="1"
-            strokeDasharray="4 8"
-          />
+          {/* Decorative crosshairs */}
+          <g opacity="0.15">
+            <line x1="30" y1="50" x2="50" y2="50" stroke="var(--text-secondary)" strokeWidth="0.5" />
+            <line x1="40" y1="40" x2="40" y2="60" stroke="var(--text-secondary)" strokeWidth="0.5" />
+            <line x1="510" y1="50" x2="530" y2="50" stroke="var(--text-secondary)" strokeWidth="0.5" />
+            <line x1="520" y1="40" x2="520" y2="60" stroke="var(--text-secondary)" strokeWidth="0.5" />
+          </g>
         </svg>
       </div>
 
-      {/* Control */}
-      <div className="flex gap-3">
-        <button
-          onClick={() => { setEnergy(0); setCharging(false) }}
-          className="flex-1 thin-border py-2 text-xs font-[var(--font-cjk)] text-[var(--text-secondary)] hover:text-[var(--energy-glow)] hover:border-[var(--energy-glow)] transition-colors"
-        >
-          重置
-        </button>
-        <button
-          onClick={() => setCharging(!charging)}
-          className={`flex-1 thin-border py-2 text-xs font-[var(--font-cjk)] transition-colors ${
-            charging 
-              ? 'text-[var(--energy-glow)] border-[var(--energy-glow)]' 
-              : 'text-[var(--text-secondary)] hover:text-[var(--energy-glow)] hover:border-[var(--energy-glow)]'
-          }`}
-        >
-          {charging ? '充能中...' : '开始充能'}
-        </button>
-      </div>
-
-      {/* Status text */}
-      <div className="mt-4 text-center">
-        <span className="font-[var(--font-en)] text-[var(--text-secondary)] text-[10px] tracking-[0.3em]">
-          {energy >= 100 ? '★ FULLY CHARGED ★' : energy > 60 ? 'CHARGING...' : 'AWAITING ENERGY'}
+      {/* Energy number display */}
+      <div className="flex items-end justify-between mb-4">
+        <div>
+          <span className="font-[var(--font-en)] text-3xl text-[var(--energy-glow)]" style={{
+            textShadow: energy >= 100 ? '0 0 10px rgba(242, 203, 91, 0.5)' : 'none'
+          }}>
+            {energy}
+          </span>
+          <span className="font-[var(--font-en)] text-[var(--text-secondary)] text-sm ml-1">/ 100</span>
+        </div>
+        <span className="font-[var(--font-script)] text-[var(--text-secondary)] text-sm">
+          {energy >= 100 ? 'fully charged!' : energy >= 60 ? 'building up...' : 'gathering...'}
         </span>
       </div>
+
+      {/* Control */}
+      <button
+        onClick={() => {
+          if (energy >= 100) {
+            setEnergy(0)
+          } else {
+            setCharging(!charging)
+          }
+        }}
+        className="w-full thin-border py-2.5 text-xs font-[var(--font-cjk)] text-[var(--text-secondary)] 
+          hover:text-[var(--energy-glow)] hover:border-[var(--energy-glow)] transition-colors"
+      >
+        {charging ? '停止充能' : energy >= 100 ? '重置能量' : '开始充能'}
+      </button>
     </div>
   )
 }
